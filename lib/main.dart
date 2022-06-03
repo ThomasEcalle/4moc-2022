@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:moc_2022/add_user_screen.dart';
 import 'package:moc_2022/analytics_manager.dart';
+import 'package:moc_2022/bo/user.dart';
 import 'package:moc_2022/firebase_options.dart';
 
 void main() async {
@@ -30,12 +32,44 @@ class Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: const Center(
-        child: Text("Coucou"),
+      body: Center(
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance.collection("users").snapshots(),
+          builder: (context, snapshot) {
+            switch (snapshot.connectionState) {
+              case ConnectionState.waiting:
+                return const CircularProgressIndicator();
+              default:
+                if (snapshot.hasError) {
+                  return Text("Erreur ! ${snapshot.error}");
+                }
+
+                final QuerySnapshot? querySnapshot = snapshot.data;
+                final List<QueryDocumentSnapshot>? documentsSnapshots = querySnapshot?.docs;
+
+                if (documentsSnapshots == null || documentsSnapshots.isEmpty) {
+                  return const Text("No users");
+                }
+
+                return ListView.builder(
+                  itemCount: documentsSnapshots.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final User user = User.fromJson(
+                      documentsSnapshots[index].data() as Map<String, dynamic>,
+                    );
+                    return ListTile(
+                      title: Text("${user.firstName} ${user.lastName}"),
+                      subtitle: Text("Age: ${user.age}"),
+                    );
+                  },
+                );
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: _addUser,
+        onPressed: () => _addUser(context),
       ),
     );
   }
@@ -49,27 +83,7 @@ class Home extends StatelessWidget {
     );
   }
 
-  void _addUser() async {
-    final CollectionReference usersCollection = FirebaseFirestore.instance.collection(
-      "users/TOTO/friends",
-    );
-
-    try {
-      final DocumentReference ref = await usersCollection.add({
-        "firstName": "Bob",
-        "lastName": "Dylan",
-        "age": 42,
-      });
-
-      /*usersCollection.doc("TOTO").set({
-        "firstName": "toto",
-        "lastName": "tata",
-        "age": 42,
-      });*/
-
-      //print("User added : ${ref.id}");
-    } catch (error) {
-      print(error);
-    }
+  void _addUser(BuildContext context) async {
+    AddUserScreen.navigateTo(context);
   }
 }
