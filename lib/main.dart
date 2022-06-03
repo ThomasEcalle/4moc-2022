@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:moc_2022/analytics_manager.dart';
@@ -34,7 +35,7 @@ class Home extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: () => _logEvent(context),
+        onPressed: _addUser,
       ),
     );
   }
@@ -46,5 +47,29 @@ class Home extends StatelessWidget {
         "randomKey": "randomValue",
       },
     );
+  }
+
+  void _addUser() async {
+    final CollectionReference usersCollection = FirebaseFirestore.instance.collection(
+      "users/TOTO/friends",
+    );
+
+    try {
+      final DocumentReference ref = await usersCollection.add({
+        "firstName": "Bob",
+        "lastName": "Dylan",
+        "age": 42,
+      });
+
+      /*usersCollection.doc("TOTO").set({
+        "firstName": "toto",
+        "lastName": "tata",
+        "age": 42,
+      });*/
+
+      //print("User added : ${ref.id}");
+    } catch (error) {
+      print(error);
+    }
   }
 }
