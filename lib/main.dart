@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:moc_2022/add_user_screen.dart';
@@ -57,6 +58,7 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _initFirebaseMessaging();
+    _initRemoteConfig();
   }
 
   @override
@@ -241,5 +243,23 @@ class _HomeState extends State<Home> {
     FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
       print("Firebase Messaging Token : $token");
     });
+  }
+
+  void _initRemoteConfig() async {
+    final FirebaseRemoteConfig remoteConfig = FirebaseRemoteConfig.instance;
+
+    await remoteConfig.setConfigSettings(RemoteConfigSettings(
+      fetchTimeout: Duration(seconds: 10),
+      minimumFetchInterval: Duration(hours: 1),
+    ));
+
+    final bool updated = await remoteConfig.fetchAndActivate();
+    if (updated) {
+      // the config has been updated, new parameter values are available.
+    } else {
+      // the config values were previously updated.
+    }
+    final bool toto = FirebaseRemoteConfig.instance.getBool("toto");
+    print("toto value = $toto");
   }
 }
