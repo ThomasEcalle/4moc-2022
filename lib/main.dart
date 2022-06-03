@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:isolate';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:moc_2022/add_user_screen.dart';
 import 'package:moc_2022/analytics_manager.dart';
@@ -9,7 +13,20 @@ import 'package:moc_2022/firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+
+  runZonedGuarded<Future<void>>(() async {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+
+    Isolate.current.addErrorListener(RawReceivePort((pair) async {
+      final List<dynamic> errorAndStacktrace = pair;
+      await FirebaseCrashlytics.instance.recordError(
+        errorAndStacktrace.first,
+        errorAndStacktrace.last,
+      );
+    }).sendPort);
+
+    runApp(const MaterialApp(home: Home()));
+  }, FirebaseCrashlytics.instance.recordError);
 }
 
 class MyApp extends StatelessWidget {
@@ -67,9 +84,19 @@ class Home extends StatelessWidget {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () => _addUser(context),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _crashApp,
+            child: const Icon(Icons.bug_report),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            child: const Icon(Icons.add),
+            onPressed: () => _addUser(context),
+          ),
+        ],
       ),
     );
   }
@@ -85,5 +112,26 @@ class Home extends StatelessWidget {
 
   void _addUser(BuildContext context) async {
     AddUserScreen.navigateTo(context);
+  }
+
+  void _crashApp() {
+    //FirebaseCrashlytics.instance.crash();
+    //throw Exception("SALUT, ceci est un crash de test");
+
+    try {
+      _getFakeDataFromNetwork();
+    } catch (exception, stackstrace) {
+      // UI logic
+      // ...
+
+      FirebaseCrashlytics.instance.recordError(
+        exception,
+        stackstrace,
+      );
+    }
+  }
+
+  Future<void> _getFakeDataFromNetwork() {
+    throw Exception("OUPS, Server Error");
   }
 }
